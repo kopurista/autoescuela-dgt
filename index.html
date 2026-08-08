@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f151d">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Autoescuela">
+<title>Autoescuela DGT · Permiso B</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="iconos/favicon.png">
+<link rel="apple-touch-icon" href="iconos/icono-192.png">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<div id="cargando" class="cargando">
+  <div class="spinner"></div>
+  <p>Cargando el temario…</p>
+</div>
+
+<!-- ------------------------------------------------ MENÚ -->
+<section id="pantalla-menu" class="pantalla oculta">
+  <header class="cabecera-menu">
+    <h1>Autoescuela DGT</h1>
+    <p class="sub" id="menu-sub"></p>
+  </header>
+
+  <div class="cifras" id="menu-cifras"></div>
+
+  <div class="modos">
+    <button class="modo" data-modo="temas">
+      <span class="modo-titulo">Test por temas</span>
+      <span class="modo-desc">Practica un tema concreto a fondo</span>
+    </button>
+    <button class="modo" data-modo="aleatorio">
+      <span class="modo-titulo">Test aleatorio</span>
+      <span class="modo-desc">20 preguntas de todo el temario</span>
+    </button>
+    <button class="modo destacado" data-modo="oficial">
+      <span class="modo-titulo">Examen oficial DGT</span>
+      <span class="modo-desc">30 preguntas · 30 min · máximo 3 fallos</span>
+    </button>
+    <button class="modo peligro" data-modo="fallos">
+      <span class="modo-titulo">Test de fallos</span>
+      <span class="modo-desc" id="desc-fallos">Tus preguntas pendientes</span>
+    </button>
+  </div>
+
+  <div class="secundarios">
+    <button class="btn-plano" data-ir="estadisticas">Estadísticas y análisis</button>
+  </div>
+</section>
+
+<!-- ------------------------------------------------ TEMAS -->
+<section id="pantalla-temas" class="pantalla oculta">
+  <header class="barra">
+    <button class="btn-volver" data-ir="menu">←</button>
+    <h2>Test por temas</h2>
+  </header>
+  <div id="lista-temas" class="lista"></div>
+</section>
+
+<!-- ------------------------------------------------ TEST -->
+<section id="pantalla-test" class="pantalla oculta">
+  <header class="barra barra-test">
+    <span id="test-titulo" class="test-titulo"></span>
+    <span id="test-marcador" class="marcador"></span>
+    <span id="test-reloj" class="reloj"></span>
+  </header>
+  <div class="progreso"><div id="test-barra"></div></div>
+
+  <div class="scroll" id="test-scroll">
+    <p class="contador" id="test-contador"></p>
+    <h3 class="enunciado" id="test-enunciado"></h3>
+    <div class="ilustracion" id="test-ilustracion"></div>
+    <div class="opciones" id="test-opciones"></div>
+    <div class="feedback oculta" id="test-feedback"></div>
+  </div>
+
+  <footer class="pie">
+    <button class="btn-plano" id="btn-abandonar">Abandonar</button>
+    <button class="btn-principal oculta" id="btn-siguiente">Siguiente →</button>
+  </footer>
+</section>
+
+<!-- ------------------------------------------------ RESULTADO -->
+<section id="pantalla-resultado" class="pantalla oculta">
+  <div class="scroll" id="resultado-scroll"></div>
+  <footer class="pie">
+    <button class="btn-principal ancho" data-ir="menu">Cerrar</button>
+  </footer>
+</section>
+
+<!-- ------------------------------------------------ ESTADÍSTICAS -->
+<section id="pantalla-estadisticas" class="pantalla oculta">
+  <header class="barra">
+    <button class="btn-volver" data-ir="menu">←</button>
+    <h2>Estadísticas</h2>
+  </header>
+  <div class="scroll" id="estadisticas-scroll"></div>
+</section>
+
+<!-- ------------------------------------------------ DIÁLOGO -->
+<div id="dialogo" class="velo oculta">
+  <div class="tarjeta-dialogo">
+    <h3 id="dialogo-titulo"></h3>
+    <p id="dialogo-texto"></p>
+    <div class="dialogo-botones">
+      <button class="btn-plano" id="dialogo-no"></button>
+      <button class="btn-peligro oculta" id="dialogo-si"></button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
