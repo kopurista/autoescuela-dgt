@@ -13,43 +13,48 @@ posible en Android. Hay una sección sobre eso al final.
 
 ---
 
-## Probarla ahora mismo
+## Está publicada aquí
 
-1. Doble clic en **`Abrir en el movil.bat`**. Deja la ventana abierta.
-2. Verás dos direcciones. Abre en el móvil la que empieza por `http://192.168…`
-3. El móvil tiene que estar en **la misma wifi** que el ordenador.
+### https://kopurista.github.io/autoescuela-dgt/
 
-Ya puedes hacer tests. El progreso se guarda en el propio móvil.
+Abre esa dirección en el móvil e instálala en la pantalla de inicio:
 
-### Instalarla en la pantalla de inicio
+- **Android (Chrome):** menú ⋮ → *Instalar aplicación* (o *Añadir a pantalla de
+  inicio*).
+- **iPhone (Safari):** botón Compartir → *Añadir a pantalla de inicio*.
 
-- **iPhone (Safari):** botón Compartir → *Añadir a pantalla de inicio*. Funciona
-  también por wifi.
-- **Android (Chrome):** menú ⋮ → *Añadir a pantalla de inicio*.
+Una vez instalada funciona **sin conexión** y sin depender del ordenador: la
+primera visita descarga las 480 preguntas y las 78 señales (unos 3 MB) y las
+guarda en el móvil.
+
+El progreso se guarda en el propio dispositivo.
+
+### Publicar los cambios
+
+El repositorio es `kopurista/autoescuela-dgt` y esta carpeta **es** ese
+repositorio. Después de regenerar el contenido:
+
+```bash
+git add -A
+git commit -m "Preguntas nuevas"
+git push
+```
+
+Pages reconstruye el sitio en un par de minutos.
 
 ---
 
-## Para que funcione sin conexión hace falta HTTPS
+## Servirla en local (para desarrollo)
 
-Esto conviene entenderlo antes de pelearse con ello. El guardado sin conexión
-lo hace un *service worker*, y los navegadores solo lo permiten en lo que
-llaman un **contexto seguro**: HTTPS, `localhost` o `127.0.0.1`.
+`python servir.py`, o doble clic en `Abrir en el movil.bat`. Te da una
+dirección `http://192.168…` accesible desde el móvil por wifi.
 
-`http://192.168.1.81:8765` no es ninguna de las tres. Por wifi, la aplicación
-**funciona** pero no se guarda para usarla sin cobertura, y en Android la
-instalación queda a medias. El código lo detecta y simplemente no intenta
-registrarlo, así que no falla nada: solo depende de que el ordenador esté
-encendido y sirviendo.
-
-Para tenerla de verdad en el bolsillo hay dos caminos:
-
-- **Publicarla en un hosting estático gratuito** (GitHub Pages, Netlify,
-  Cloudflare Pages). Se sube la carpeta `movil/` entera y ya tienes HTTPS,
-  instalación completa y funcionamiento sin conexión. Es lo más cómodo con
-  diferencia: el ordenador deja de hacer falta.
-- **Un túnel** (`cloudflared`, `ngrok`) que da una URL HTTPS temporal
-  apuntando a tu ordenador. Sirve para probar, pero la URL cambia y el
-  ordenador tiene que seguir encendido.
+Ojo: por wifi la aplicación **funciona pero no se guarda sin conexión**. El
+guardado offline lo hace un *service worker* y los navegadores solo lo
+permiten en un **contexto seguro**: HTTPS, `localhost` o `127.0.0.1`. Una IP
+de red local no es ninguna de las tres. El código lo detecta y no intenta
+registrarlo, así que no falla nada. Para el uso diario, usa la dirección de
+GitHub Pages.
 
 ---
 
