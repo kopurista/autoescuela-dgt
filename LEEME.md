@@ -2,7 +2,7 @@
 
 Una PWA: una web que se guarda en la pantalla de inicio del móvil y funciona
 como una app. Misma lógica que la versión de escritorio (los cuatro modos de
-test, el banco de fallos y el análisis), el mismo banco de **480 preguntas** y
+test, el banco de fallos y el análisis), el mismo banco de **680 preguntas** y
 las **señales oficiales**.
 
 Funciona en Android y en iPhone, y no hace falta instalar nada en el ordenador
@@ -24,7 +24,7 @@ Abre esa dirección en el móvil e instálala en la pantalla de inicio:
 - **iPhone (Safari):** botón Compartir → *Añadir a pantalla de inicio*.
 
 Una vez instalada funciona **sin conexión** y sin depender del ordenador: la
-primera visita descarga las 480 preguntas y las 78 señales (unos 3 MB) y las
+primera visita descarga las 680 preguntas y las 123 señales (unos 5 MB) y las
 guarda en el móvil.
 
 El progreso se guarda en el propio dispositivo.
@@ -140,6 +140,6 @@ movil/
 ├── servir.py               servidor local + Abrir en el movil.bat
 ├── generar_datos.py        construye datos/ desde las preguntas de escritorio
 ├── generar_iconos.py       construye iconos/
-├── datos/                  banco.json + las 78 señales usadas (3 MB)
+├── datos/                  banco.json + las 123 señales usadas (4,7 MB)
 └── iconos/
 ```

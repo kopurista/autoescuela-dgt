@@ -3,7 +3,7 @@
    así que al añadir preguntas nuevas basta con subir la versión de abajo. */
 "use strict";
 
-const VERSION = "dgt-v1";
+const VERSION = "dgt-v2";
 const NUCLEO = [
   ".",
   "index.html",

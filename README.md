@@ -3,7 +3,7 @@
 Aplicación web para preparar el examen teórico del permiso B. Se instala en la
 pantalla de inicio del móvil y funciona sin conexión.
 
-**480 preguntas** repartidas en 9 temas, con las **señales oficiales**,
+**680 preguntas** repartidas en 9 temas, con las **señales oficiales**,
 corrección explicada, banco de fallos con repetición espaciada y análisis de en
 qué apartados fallas más.
 
