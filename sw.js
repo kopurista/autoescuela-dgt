@@ -1,9 +1,9 @@
-/* Service worker: deja la aplicación funcionando sin conexión.
+﻿/* Service worker: deja la aplicación funcionando sin conexión.
    La lista de señales no está escrita a mano: se deduce de banco.json,
    así que al añadir preguntas nuevas basta con subir la versión de abajo. */
 "use strict";
 
-const VERSION = "dgt-v2";
+const VERSION = "dgt-v3";
 const NUCLEO = [
   ".",
   "index.html",

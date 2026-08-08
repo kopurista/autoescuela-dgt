@@ -337,8 +337,14 @@ function iniciarTest(modo, tema = null) {
 
   test = {
     modo, tema, titulo, preguntas: preparadas, feedback, maxFallos,
-    indice: 0, aciertos: 0, fallos: 0, respondida: false,
-    registro: [], inicio: Date.now(), limite, terminado: false, tarea: null,
+    // En el examen oficial se puede rectificar y volver atrás, como en el de
+    // verdad. Por eso las respuestas se guardan en memoria y no se apuntan en
+    // el progreso hasta el final: si no, cada cambio contaría como otra
+    // respuesta y ensuciaría el banco de fallos.
+    diferido: !feedback,
+    respuestas: new Array(preparadas.length).fill(null),
+    indice: 0, respondida: false, volcado: false,
+    inicio: Date.now(), limite, terminado: false, tarea: null,
   };
 
   $("#test-titulo").textContent = titulo;
@@ -358,20 +364,28 @@ function tictac() {
   test.tarea = setTimeout(tictac, 500);
 }
 
+/* Aciertos y fallos se calculan a partir de las respuestas guardadas, para
+   que rectificar una ajuste el marcador solo. */
+const dadas = () => test.respuestas.filter((r) => r !== null);
+const aciertosDe = () => dadas().filter((r) => r.acierta).length;
+const fallosDe = () => dadas().filter((r) => !r.acierta).length;
+const sinContestar = () => test.preguntas.length - dadas().length;
+
 function refrescarMarcador() {
   const m = $("#test-marcador");
   if (!test.feedback) {
     // Como en el examen real: no se sabe cuántas llevas bien.
-    m.textContent = `Respondidas ${test.registro.length}/${test.preguntas.length}` +
+    m.textContent = `Respondidas ${dadas().length}/${test.preguntas.length}` +
       (test.maxFallos ? ` · máx. ${test.maxFallos} fallos` : "");
   } else {
-    m.textContent = `✔ ${test.aciertos}  ✘ ${test.fallos}`;
+    m.textContent = `✔ ${aciertosDe()}  ✘ ${fallosDe()}`;
   }
 }
 
 function pintarPregunta() {
   const p = test.preguntas[test.indice];
-  test.respondida = false;
+  const previa = test.respuestas[test.indice];
+  test.respondida = previa !== null;
   test.inicioPregunta = Date.now();
 
   $("#test-contador").textContent =
@@ -400,58 +414,115 @@ function pintarPregunta() {
 
   $("#test-feedback").classList.add("oculta");
   $("#btn-siguiente").classList.add("oculta");
+  $("#btn-anterior").classList.add("oculta");
   $("#test-scroll").scrollTop = 0;
+
+  if (test.diferido) {
+    // Se puede navegar y cambiar de opinión libremente.
+    if (test.indice > 0) $("#btn-anterior").classList.remove("oculta");
+    actualizarBotonSiguiente();
+    if (previa) marcarEleccion(previa.elegida);
+  } else if (previa) {
+    // Con corrección inmediata, la pregunta ya contestada queda cerrada.
+    pintarCorreccion(p, previa.elegida, previa.acierta);
+    actualizarBotonSiguiente();
+  }
 }
 
-function responder(elegida) {
-  if (test.respondida || test.terminado) return;
-  test.respondida = true;
+function marcarEleccion(elegida) {
+  [...$("#test-opciones").children].forEach((b, i) => {
+    b.classList.toggle("elegida", i === elegida);
+  });
+}
 
-  const p = test.preguntas[test.indice];
-  const acierta = elegida === p.correcta;
-  if (acierta) test.aciertos++; else test.fallos++;
-
-  progreso.respuestas.push({ p: p.id, c: acierta ? 1 : 0, t: Date.now() });
-  test.registro.push({ pregunta: p, elegida, acierta });
-  guardarProgreso();
-
-  const botones = [...$("#test-opciones").children];
-  botones.forEach((b) => (b.disabled = true));
-  $("#test-barra").style.width =
-    `${((test.indice + 1) / test.preguntas.length) * 100}%`;
-  refrescarMarcador();
-
-  if (test.feedback) {
-    botones[p.correcta].classList.add("buena");
-    if (!acierta) botones[elegida].classList.add("mala");
-    const fb = $("#test-feedback");
-    fb.textContent = "";
-    const h = crear("h5", null, acierta
-      ? "Correcto"
-      : `Incorrecto · La respuesta buena es la ${LETRAS[p.correcta]}`);
-    h.style.color = acierta ? "var(--verde)" : "var(--rojo)";
-    fb.append(h, crear("p", null, p.explicacion));
-    fb.classList.remove("oculta");
-  } else {
-    botones[elegida].classList.add("elegida");
-  }
-
+function actualizarBotonSiguiente() {
   const btn = $("#btn-siguiente");
   btn.textContent = test.indice + 1 >= test.preguntas.length
     ? "Ver resultado →" : "Siguiente →";
   btn.classList.remove("oculta");
 }
 
+function pintarCorreccion(p, elegida, acierta) {
+  const botones = [...$("#test-opciones").children];
+  botones.forEach((b) => (b.disabled = true));
+  botones[p.correcta].classList.add("buena");
+  if (!acierta) botones[elegida].classList.add("mala");
+  const fb = $("#test-feedback");
+  fb.textContent = "";
+  const h = crear("h5", null, acierta
+    ? "Correcto"
+    : `Incorrecto · La respuesta buena es la ${LETRAS[p.correcta]}`);
+  h.style.color = acierta ? "var(--verde)" : "var(--rojo)";
+  fb.append(h, crear("p", null, p.explicacion));
+  fb.classList.remove("oculta");
+}
+
+function responder(elegida) {
+  if (test.terminado) return;
+  // Con corrección inmediata, contestar cierra la pregunta. En el examen
+  // oficial se puede rectificar tantas veces como se quiera.
+  if (test.respondida && !test.diferido) return;
+
+  const p = test.preguntas[test.indice];
+  const acierta = elegida === p.correcta;
+  test.respondida = true;
+  test.respuestas[test.indice] = { pregunta: p, elegida, acierta };
+
+  $("#test-barra").style.width =
+    `${((test.indice + 1) / test.preguntas.length) * 100}%`;
+  refrescarMarcador();
+
+  if (test.diferido) {
+    // Ni se revela el acierto ni se apunta todavía: vale la última respuesta.
+    marcarEleccion(elegida);
+    actualizarBotonSiguiente();
+    return;
+  }
+
+  progreso.respuestas.push({ p: p.id, c: acierta ? 1 : 0, t: Date.now() });
+  guardarProgreso();
+  pintarCorreccion(p, elegida, acierta);
+  actualizarBotonSiguiente();
+}
+
+function volcarRespuestas() {
+  // Solo en los modos diferidos, donde no se apunta sobre la marcha.
+  if (!test.diferido || test.volcado) return;
+  test.volcado = true;
+  const ahora = Date.now();
+  for (const r of dadas()) {
+    progreso.respuestas.push({ p: r.pregunta.id, c: r.acierta ? 1 : 0, t: ahora });
+  }
+  guardarProgreso();
+}
+
 function siguiente() {
-  if (!test.respondida) return;
-  if (test.indice + 1 >= test.preguntas.length) terminarTest(false);
-  else { test.indice++; pintarPregunta(); }
+  // En el examen oficial se puede dejar una en blanco y volver luego.
+  if (!test.respondida && !test.diferido) return;
+  if (test.indice + 1 >= test.preguntas.length) {
+    if (test.diferido && sinContestar()) {
+      const n = sinContestar();
+      dialogo({
+        titulo: "Quedan preguntas sin contestar",
+        texto: `Tienes ${n} ${n === 1 ? "pregunta" : "preguntas"} en blanco. `
+          + "En el examen oficial cuentan como fallo. Puedes volver atrás para completarlas.",
+        si: "Terminar de todas formas", no: "Volver a revisar",
+        alAceptar: () => terminarTest(false),
+      });
+      return;
+    }
+    terminarTest(false);
+  } else { test.indice++; pintarPregunta(); }
+}
+
+function anterior() {
+  if (test.indice > 0) { test.indice--; pintarPregunta(); }
 }
 
 function cerrarIntento(estado, aprobado) {
   progreso.intentos.push({
     ts: Date.now(), modo: test.modo, tema: test.tema,
-    n: test.preguntas.length, ok: test.aciertos, ko: test.fallos,
+    n: test.preguntas.length, ok: aciertosDe(), ko: fallosDe(),
     estado, aprobado,
     dur: Math.round((Date.now() - test.inicio) / 1000),
   });
@@ -462,6 +533,7 @@ function abandonarTest() {
   if (!test || test.terminado) return;
   test.terminado = true;
   clearTimeout(test.tarea);
+  volcarRespuestas();
   cerrarIntento("abandonado", null);
   test = null;
   pintarMenu();
@@ -471,14 +543,16 @@ function terminarTest(porTiempo) {
   if (test.terminado) return;
   test.terminado = true;
   clearTimeout(test.tarea);
+  volcarRespuestas();
 
-  const sinContestar = test.preguntas.length - test.registro.length;
+  const blancos = sinContestar();
   let aprobado = null;
   if (test.maxFallos !== null) {
-    aprobado = test.fallos <= test.maxFallos && sinContestar === 0;
+    // Una pregunta en blanco cuenta como fallo, igual que en el examen real.
+    aprobado = (fallosDe() + blancos) <= test.maxFallos;
   }
   cerrarIntento("terminado", aprobado);
-  pintarResultado(aprobado, porTiempo, sinContestar);
+  pintarResultado(aprobado, porTiempo, blancos);
 }
 
 /* ------------------------------------------------------------------ */
@@ -488,8 +562,8 @@ function pintarResultado(aprobado, porTiempo, sinContestar) {
   const sc = $("#resultado-scroll");
   sc.textContent = "";
 
-  const contestadas = Math.max(1, test.registro.length);
-  const tasa = test.aciertos / contestadas;
+  const respondidas = dadas();
+  const tasa = aciertosDe() / Math.max(1, respondidas.length);
 
   const titular = crear("div", "titular",
     aprobado === null ? "Test terminado" : aprobado ? "APTO" : "NO APTO");
@@ -504,11 +578,11 @@ function pintarResultado(aprobado, porTiempo, sinContestar) {
   }
 
   const cifras = crear("div", "cifras");
-  const dur = test.registro.length
+  const dur = respondidas.length
     ? Math.round((Date.now() - test.inicio) / 1000) : 0;
   const datos = [
-    [String(test.aciertos), "aciertos", "var(--verde)"],
-    [String(test.fallos), "fallos", "var(--rojo)"],
+    [String(aciertosDe()), "aciertos", "var(--verde)"],
+    [String(fallosDe()), "fallos", "var(--rojo)"],
     [pct(tasa), "de acierto", "var(--acento)"],
     [`${Math.floor(dur / 60)}:${String(dur % 60).padStart(2, "0")}`, "tiempo", "var(--suave)"],
   ];
@@ -527,7 +601,7 @@ function pintarResultado(aprobado, porTiempo, sinContestar) {
     sc.append(p);
   }
 
-  const fallados = test.registro.filter((r) => !r.acierta);
+  const fallados = respondidas.filter((r) => !r.acierta);
   if (fallados.length) {
     sc.append(crear("h4", null, `Repasa estos ${fallados.length} fallos`));
     for (const { pregunta: p, elegida } of fallados) {
@@ -714,6 +788,7 @@ async function arrancar() {
     };
   });
   $("#btn-siguiente").onclick = siguiente;
+  $("#btn-anterior").onclick = anterior;
   $("#btn-abandonar").onclick = () => dialogo({
     titulo: "¿Abandonar el test?",
     texto: "Se guardarán las respuestas que ya hayas dado, pero el test constará como abandonado en tus estadísticas.",
