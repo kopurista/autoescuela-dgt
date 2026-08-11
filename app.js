@@ -159,6 +159,94 @@ const porEtiqueta = (minimo = 3) =>
   agrupar((p) => (p.etiquetas.length ? p.etiquetas : ["sin clasificar"]))
     .filter((d) => d.respuestas >= minimo);
 
+/* ---------- historial de actividad ---------- */
+const NOMBRE_MODO = {
+  aleatorio: "Test aleatorio", tema: "Test por temas",
+  oficial: "Examen oficial", fallos: "Test de fallos",
+  forzado: "Test obligatorio",
+};
+
+function nombreModo(modo, tema) {
+  let n = NOMBRE_MODO[modo] || modo;
+  if (modo === "tema" && tema) n += ` ${tema}`;
+  return n;
+}
+
+const claveDia = (ms) => {
+  const d = new Date(ms);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
+// Ojo: `historial()` ya existe y devuelve el historial POR PREGUNTA. Esta es
+// la lista de tests realizados, y por eso lleva otro nombre.
+function historialTests(limite = 40) {
+  // Por fecha, no por orden de inserción: esta sección va de cuándo se hizo.
+  return [...progreso.intentos]
+    .sort((a, b) => b.ts - a.ts)
+    .slice(0, limite)
+    .map((i) => {
+      const contestadas = i.ok + i.ko;
+      return {
+        cuando: new Date(i.ts),
+        titulo: nombreModo(i.modo, i.tema),
+        preguntas: i.n, aciertos: i.ok, fallos: i.ko,
+        duracion: i.dur || 0, estado: i.estado,
+        aprobado: i.aprobado === undefined ? null : i.aprobado,
+        tasa: contestadas ? i.ok / contestadas : null,
+      };
+    });
+}
+
+function actividadPorDia(dias = 30) {
+  const cuenta = new Map();
+  for (const i of progreso.intentos) {
+    const k = claveDia(i.ts);
+    const d = cuenta.get(k) || { tests: 0, terminados: 0 };
+    d.tests++;
+    if (i.estado === "terminado") d.terminados++;
+    cuenta.set(k, d);
+  }
+  const salida = [];
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  for (let i = dias - 1; i >= 0; i--) {
+    const f = new Date(hoy);
+    f.setDate(f.getDate() - i);
+    const d = cuenta.get(claveDia(f.getTime())) || { tests: 0, terminados: 0 };
+    salida.push({ fecha: f, ...d });
+  }
+  return salida;
+}
+
+function resumenActividad() {
+  const dias = new Set(progreso.intentos.map((i) => claveDia(i.ts)));
+  if (!dias.size) return { diasActivos: 0, racha: 0, rachaMaxima: 0, media: 0 };
+
+  const ordenados = [...dias].sort();
+  const unDia = 86400000;
+  const aFecha = (k) => { const [a, m, d] = k.split("-").map(Number); return new Date(a, m - 1, d); };
+
+  // La racha no se rompe por consultar antes de haber estudiado hoy.
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  const ultimo = aFecha(ordenados[ordenados.length - 1]);
+  let racha = 0;
+  if (hoy - ultimo <= unDia) {
+    let d = ultimo;
+    while (dias.has(claveDia(d.getTime()))) { racha++; d = new Date(d - unDia); }
+  }
+
+  let maxima = 1, actual = 1;
+  for (let i = 1; i < ordenados.length; i++) {
+    const salto = (aFecha(ordenados[i]) - aFecha(ordenados[i - 1])) / unDia;
+    actual = salto === 1 ? actual + 1 : 1;
+    maxima = Math.max(maxima, actual);
+  }
+  return {
+    diasActivos: dias.size, racha, rachaMaxima: maxima,
+    media: progreso.intentos.length / dias.size,
+  };
+}
+
 function evolucion(limite = 20) {
   return progreso.intentos
     .filter((i) => i.estado === "terminado" && (i.ok + i.ko) > 0)
@@ -697,6 +785,8 @@ function pintarEstadisticas() {
       "Los apartados concretos que atraviesan los temas, de peor a mejor."));
   }
 
+  bloqueActividad(sc);
+
   const ev = evolucion();
   if (ev.length >= 2) {
     const b = crear("div", "bloque");
@@ -724,6 +814,140 @@ function pintarEstadisticas() {
   sc.append(zona);
 
   mostrar("estadisticas");
+}
+
+function diaLegible(fecha) {
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  const d = new Date(fecha); d.setHours(0, 0, 0, 0);
+  const dias = Math.round((hoy - d) / 86400000);
+  if (dias === 0) return "Hoy";
+  if (dias === 1) return "Ayer";
+  return d.toLocaleDateString("es-ES",
+    { weekday: "long", day: "numeric", month: "long" })
+    .replace(/^./, (c) => c.toUpperCase());
+}
+
+function bloqueActividad(sc) {
+  const r = resumenActividad();
+  if (!r.diasActivos) return;
+
+  const b = crear("div", "bloque");
+  b.append(crear("h4", null, "Cuándo has estudiado"));
+
+  const cifras = crear("div", "cifras");
+  for (const [v, rot, c] of [
+    [String(r.diasActivos), "días con tests", "var(--texto)"],
+    [String(r.racha), "días seguidos",
+     r.racha >= 2 ? "var(--verde)" : "var(--suave)"],
+    [String(r.rachaMaxima), "mejor racha", "var(--acento)"],
+    [r.media.toFixed(1), "tests por día", "var(--suave)"],
+  ]) {
+    const caja = crear("div", "cifra");
+    const n = crear("b", null, v);
+    n.style.color = c;
+    caja.append(n, crear("span", null, rot));
+    cifras.append(caja);
+  }
+  b.append(cifras);
+
+  const dias = actividadPorDia(30);
+  const tarjeta = crear("div", "repaso");
+  tarjeta.append(crear("div", "tema-mini", "Tests por día (últimos 30)"));
+  const c = crear("canvas");
+  c.id = "grafica-dias";
+  c.style.width = "100%";
+  c.style.height = "110px";
+  c.style.display = "block";
+  tarjeta.append(c);
+  b.append(tarjeta);
+  requestAnimationFrame(() => pintarActividad(c, dias));
+
+  const registros = historialTests(40);
+  if (registros.length) {
+    b.append(crear("h4", null, `Tus últimos ${registros.length} tests`));
+    let ultimoDia = null;
+    for (const t of registros) {
+      const k = claveDia(t.cuando.getTime());
+      if (k !== ultimoDia) {
+        ultimoDia = k;
+        const cuantos = registros.filter(
+          (x) => claveDia(x.cuando.getTime()) === k).length;
+        const cab = crear("p", null,
+          `${diaLegible(t.cuando)}  ·  ${cuantos} ${cuantos === 1 ? "test" : "tests"}`);
+        cab.style.cssText =
+          "color:var(--acento);font-weight:700;font-size:.85rem;margin:14px 0 6px";
+        b.append(cab);
+      }
+      b.append(filaTest(t));
+    }
+  }
+  sc.append(b);
+}
+
+function filaTest(t) {
+  const caja = crear("div", "repaso");
+  const fila = crear("div");
+  fila.style.cssText = "display:flex;gap:10px;align-items:flex-start";
+
+  const izq = crear("div");
+  izq.style.flex = "1";
+  const hora = String(t.cuando.getHours()).padStart(2, "0") + ":" +
+    String(t.cuando.getMinutes()).padStart(2, "0");
+  const tit = crear("div", null, `${hora}   ${t.titulo}`);
+  tit.style.cssText = "font-size:.95rem";
+  const m = Math.floor(t.duracion / 60), s = t.duracion % 60;
+  const sub = crear("div", null,
+    `${t.aciertos} de ${t.preguntas}   ·   ${m}:${String(s).padStart(2, "0")} min`);
+  sub.style.cssText = "font-size:.78rem;color:var(--suave);margin-top:2px";
+  izq.append(tit, sub);
+
+  let texto, color;
+  if (t.estado === "abandonado") { texto = "Abandonado"; color = "var(--rojo)"; }
+  else if (t.aprobado !== null) {
+    texto = t.aprobado ? "APTO" : "NO APTO";
+    color = t.aprobado ? "var(--verde)" : "var(--rojo)";
+  } else if (t.tasa !== null) { texto = pct(t.tasa); color = colorTasa(t.tasa); }
+  else { texto = "Sin respuestas"; color = "var(--suave)"; }
+
+  const der = crear("div", null, texto);
+  der.style.cssText = `font-weight:700;font-size:.9rem;color:${color};white-space:nowrap`;
+  fila.append(izq, der);
+  caja.append(fila);
+  return caja;
+}
+
+function pintarActividad(canvas, dias) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  canvas.width = w * dpr; canvas.height = h * dpr;
+  const g = canvas.getContext("2d");
+  g.scale(dpr, dpr);
+  g.clearRect(0, 0, w, h);
+
+  const arriba = 18, abajo = 16;
+  const util = h - arriba - abajo;
+  const maximo = Math.max(1, ...dias.map((d) => d.tests));
+  const hueco = w / dias.length;
+  const grosor = Math.max(3, hueco * 0.62);
+
+  g.font = "8px system-ui";
+  g.textAlign = "center";
+  dias.forEach((d, i) => {
+    const x = hueco * (i + 0.5);
+    const altura = (d.tests / maximo) * util;
+    g.fillStyle = !d.tests ? "#2b3a50"
+      : d.terminados === d.tests ? "#2f9e5f" : "#f0a500";
+    if (d.tests) g.fillRect(x - grosor / 2, arriba + util - altura, grosor, altura);
+    else g.fillRect(x - grosor / 2, arriba + util - 2, grosor, 2);
+    if (d.tests) {
+      g.fillStyle = "#93a5bb";
+      g.fillText(String(d.tests), x, arriba + util - altura - 4);
+    }
+    if (i % 5 === 0 || i === dias.length - 1) {
+      g.fillStyle = "#93a5bb";
+      g.fillText(String(d.fecha.getDate()), x, h - 4);
+    }
+  });
 }
 
 function pintarGrafica(canvas, datos) {
