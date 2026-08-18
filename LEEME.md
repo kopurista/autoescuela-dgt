@@ -2,7 +2,7 @@
 
 Una PWA: una web que se guarda en la pantalla de inicio del móvil y funciona
 como una app. Misma lógica que la versión de escritorio (los cuatro modos de
-test, el banco de fallos y el análisis), el mismo banco de **680 preguntas** y
+test, el banco de fallos y el análisis), el mismo banco de **1.200 preguntas** y
 las **señales oficiales**.
 
 Funciona en Android y en iPhone, y no hace falta instalar nada en el ordenador
@@ -24,7 +24,7 @@ Abre esa dirección en el móvil e instálala en la pantalla de inicio:
 - **iPhone (Safari):** botón Compartir → *Añadir a pantalla de inicio*.
 
 Una vez instalada funciona **sin conexión** y sin depender del ordenador: la
-primera visita descarga las 680 preguntas y las 123 señales (unos 5 MB) y las
+primera visita descarga las 1.200 preguntas y las señales (unos 6 MB) y las
 guarda en el móvil.
 
 El progreso se guarda en el propio dispositivo.
